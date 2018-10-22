@@ -19,8 +19,10 @@ enp0s8: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX packets 27  bytes 4511 (4.4 KiB)
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ``` -->
+# 操作影片
+> 點擊進入 Youtube 網站觀看
 
-[![操作影片](http://img.youtube.com/vi/Iqd6LMNxFjg/0.jpg)](http://www.youtube.com/watch?v=Iqd6LMNxFjg)
+[![操作影片](./media/W6_video_thumbnail.png)](http://www.youtube.com/watch?v=Iqd6LMNxFjg)
 
 # 詳細步驟
 > 注意大小寫有別：`NetworkManager` 首字為大寫；`network` 首字為小寫。
