@@ -92,7 +92,17 @@ vim ifcfg-enp0s3
 ping -I enp0s3 8.8.8.8 -c 3
 ```
 
-12. 成功
+12. 透過 `ifup` 指令來啟用網路介面
+```
+ifup enp0s3
+```
+
+13. 使用 `chkconfig` 設定開機時啟用 network 服務
+```
+chkconfig network on
+```
+
+14. 成功
 ---
 
 # 參考資料
@@ -234,3 +244,8 @@ PING google.com (172.217.160.78) 56(84) bytes of data.
 1 packets transmitted, 1 received, 0% packet loss, time 0ms
 rtt min/avg/max/mdev = 64.321/64.321/64.321/0.000 ms
 ```
+
+### 參考資料
+* [CentOS Linux 靜態 IP 位址網路設定教學 - G. T. Wang](https://blog.gtwang.org/linux/centos-linux-static-network-configuration-tutorial/)
+* [centOS 7下無法啟動網絡（service network start）錯誤解決辦法（應該是最全的了。。。） - 掃文資訊](https://hk.saowen.com/a/e2fe2cf1246d939df498f091a958172e835d14bff8506b26221117f484308014)
+* [zh-tw/FAQ/CentOS7 - CentOS Wiki](https://wiki.centos.org/zh-tw/FAQ/CentOS7)
