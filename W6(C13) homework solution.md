@@ -20,6 +20,8 @@ enp0s8: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500
         TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
 ``` -->
 
+<object width="100%" height="100%"><param name="movie" value="https://www.youtube.com/v/Iqd6LMNxFjg&hl=en&fs=1"></param><param name="allowFullScreen" value="true"></param><embed src="https://www.youtube.com/v/Iqd6LMNxFjg&hl=en&fs=1" type="application/x-shockwave-flash" allowfullscreen="true" width="425" height="344"></embed></object>
+
 # 詳細步驟
 > 注意大小寫有別：`NetworkManager` 首字為大寫；`network` 首字為小寫。
 
