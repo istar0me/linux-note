@@ -51,16 +51,67 @@ yum install -y https://buildlogs.centos.org/c7-updates/kernel/3.10.0-123.el7/201
 * VirtualBox -> 設定值 -> 進階 -> 共用剪貼簿改為雙向
 
 # 2. 遠端主機登入 with SSH、儲存雙方密碼
+* 設定機器一網路為 NAT + Host-only；機器二為 Host-only
+* 假設機器一 IP 為 192.168.56.101，機器二 IP 為 192.168.56.102
 * 第一台機器輸入：
 ```shell
 systemctl start sshd
+systemctl enable sshd
 
-netstat -anp | grep sshd # 確認是否開啟
-
-ifconfig # 記住第一台的 IP
+netstat -anp | grep sshd # 確認 ssh 是否開啟
 ```
 
-* 再製第二台機器，並輸入：
+* 關機來再製第二台機器，並在第二台機器中輸入：
 ```shell
+netstat -anp | grep sshd # 確認 ssh 是否開啟
 
+ssh-keygen -t rsa
+ssh-copy-id user@192.168.56.101
+# 再輸入第二台的密碼，預設為 user
+```
+
+* 再回到第一台機器中輸入：
+```shell
+ssh-keygen -t rsa
+ssh-copy-id user@192.168.56.102
+# 再輸入第一台的密碼，預設為 user
+```
+
+# 3. 將 NetworkManager 改為 network 的網路服務
+
+```shell
+systemctl disable NetworkManager
+systemctl stop NetworkManager
+systemctl status NetworkManager
+
+cd /etc/sysconfig/network-scripts
+mv ifcfg-Auto_Ethernet-1 ifcfg-Auto_Ethernet.bak
+rm -rf ifcfg-Auto_Ethernet-1
+
+ifconfig enp0s3
+# 記錄下當前的 IP, netmask, MAC Address
+```
+
+```shell
+vim ifcfg-enp0s3
+```
+* 欲修改的行
+    * `BOOTPROTO=static`（從原先 `dhcp` 動態設定 IP 改為手動的 `static`）
+    * `ONBOOT=yes`（設定為開機自動按照此檔案設定網路）
+* 欲新增的行（要填入的值請參考步驟 8）
+    * `IPADDR=要填入的值`
+    * `NETMASK=要填入的值`
+    * `HWADDR=要填入的值`
+    * `DNS1=8.8.8.8`（選擇項，手動指定 DNS server，這邊可設定為 Google Public DNS 的 `8.8.8.8`）
+
+```shell
+systemctl start network
+systemctl status network
+
+ping -I enp0s3 8.8.8.8 -c 3
+chkconfig network on # 開機時啟用 network 服務
+```
+
+# 4. 架設 FTP Server with ftpd
+```shell
 ```
