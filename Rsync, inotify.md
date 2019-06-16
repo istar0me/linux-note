@@ -1,0 +1,229 @@
+- [rsync + inotify](#rsync--inotify)
+- [sp, scp 與 rsync 差異](#sp-scp-%E8%88%87-rsync-%E5%B7%AE%E7%95%B0)
+- [rsync](#rsync)
+  - [Client 端從 Server 端拉取資料（Client <= Server）](#client-%E7%AB%AF%E5%BE%9E-server-%E7%AB%AF%E6%8B%89%E5%8F%96%E8%B3%87%E6%96%99client--server)
+    - [Server 端（192.168.56.102）](#server-%E7%AB%AF19216856102)
+    - [Client 端（192.168.56.104）](#client-%E7%AB%AF19216856104)
+  - [Server 主動傳輸到 Client 操作過程（Server => Client）](#server-%E4%B8%BB%E5%8B%95%E5%82%B3%E8%BC%B8%E5%88%B0-client-%E6%93%8D%E4%BD%9C%E9%81%8E%E7%A8%8Bserver--client)
+- [inotify](#inotify)
+  - [inotify 操作流程](#inotify-%E6%93%8D%E4%BD%9C%E6%B5%81%E7%A8%8B)
+- [撰寫腳本，透過 rsync + inotify 來自動同步檔案](#%E6%92%B0%E5%AF%AB%E8%85%B3%E6%9C%AC%E9%80%8F%E9%81%8E-rsync--inotify-%E4%BE%86%E8%87%AA%E5%8B%95%E5%90%8C%E6%AD%A5%E6%AA%94%E6%A1%88)
+- [參考資料](#%E5%8F%83%E8%80%83%E8%B3%87%E6%96%99)
+  - [rsync](#rsync-1)
+  - [inotify](#inotify-1)
+  - [其它](#%E5%85%B6%E5%AE%83)
+
+---
+
+# rsync + inotify
+* rsync：遠端備份
+* inotify：即時檔案監控系統，當檔案新增、修改、刪除時會發出通知。
+* 使用時機：
+  1. 立即還原：若今天伺服器遭駭，首頁被更改。能透過 inotify 發出通知，並且搭配 rsync Pull 遠端伺服器資料還原先前的資料
+  2. 立即備份：請參閱[撰寫腳本，透過 rsync + inotify 來自動同步檔案](#%E6%92%B0%E5%AF%AB%E8%85%B3%E6%9C%AC%E9%80%8F%E9%81%8E-rsync--inotify-%E4%BE%86%E8%87%AA%E5%8B%95%E5%90%8C%E6%AD%A5%E6%AA%94%E6%A1%88)
+
+# sp, scp 與 rsync 差異
+| -             | sp       | scp        | rsync      |
+| ------------- | -------- | ---------- | ---------- |
+| 內建於 Unix   | O        | O          | X          |
+| 傳輸限制      | 本機互傳 | 能跨伺服器 | 能跨伺服器 |
+| 加密傳輸(*1) | X        | O          | O          |
+| 備份模式(*2)      | 完全備份 | 完全備份   | 增量備份   |
+
+* *1 : scp 全名為 **secure** copy
+* *2 : Incremental/Differential Backup
+  * ![](/media/W13_incremental_differential_backup.png)
+  * 參照：[Incremental vs. Differential Backup - YouTube](https://www.youtube.com/watch?v=pmzeebcx-vk)
+
+# rsync
+* 全名：reomte synchronize
+* 用途：遠端同步工具
+* 特點
+  * 支援雙向操作：可進行 Push 與 Pull
+  * 採用增量備份（Incremental Backup），而非完全備份（Full Backup），因此第一次後的備份速度更快且節省頻寬
+* Client vs. Server
+  * Client：複製來源端
+  * Server：備份伺服器
+* 限制
+  * Client 與 Server 主機都需要安裝 rsync
+  * Server 主機的防火牆需要開放 873 port （可以透過修改 `/etc/services` 變更，或直接關閉防火牆）
+  * Server 主機需要設定 `/etc/rsyncd.conf` 與 `/etc/rsyncd.secrets`
+  * Client 主機要設定 `/etc/rsyncd.secrets`
+* rsync 指令介紹：[rsync命令_Linux rsync 命令用法詳解：遠程數據同步工具](http://man.linuxde.net/rsync)
+
+## Client 端從 Server 端拉取資料（Client <= Server）
+* 參考：[CentOS 7使用rsync實現數據備份 - IT閱讀](https://www.itread01.com/content/1511251328.html)
+* 記得先關閉 SELinux 與防火牆
+  * `getenforce` 來確認 SELinux 是否關閉
+  * `systemctl status firewalld` 來確認防火牆是否關閉
+
+### Server 端（192.168.56.102）
+1. 安裝 Rsync
+```
+yum install -y rsync
+```
+
+2. 配置 rsync 文件（`vim /etc/rsyncd.conf`）
+```
+uid = root
+gid = root
+use chroot = yes # 改變程序執行時所參考的根目錄位置(安全性考量，避免其他路徑的檔案被修改)
+max connections = 10
+pid file = /var/run/rsyncd.pid
+log file = /var/log/rsync.log # 傳輸紀錄的文件位置
+transfer logging = yes # 是否留下傳輸紀錄的文件
+timeout = 900
+ignore nonreadable = yes
+dont compress = *.gz *.tgz *.zip *.z *.Z *.rpm *.deb *.bz2
+
+[mybackup] # 模組名稱
+path = /data # 要備份的路徑
+secrets file = /etc/rsyncd.pass # rsync 帳密檔案路徑
+```
+> 若路徑 `/data` 不存在，需手動創建 `mkdir /data`
+
+3. 新增 Rsync 帳密檔案（`vim /etc/rsyncd.pass`）
+```
+backup:123456 # 帳號:密碼
+```
+
+4. 變更帳密檔案權限，讓使用者可以讀＋寫
+```
+chmod 600 /etc/rsyncd.pass
+```
+
+5. 啟動伺服器
+```
+systemctl start rsyncd
+```
+
+### Client 端（192.168.56.104）
+1. 同樣安裝 rsync
+```
+yum install -y rsync
+```
+
+2. 新增 Rsync 帳密檔案，這邊只需要設定密碼，帳號會在第四步的命令中指定
+```
+# vim /etc/rsyncd.pass
+123456
+```
+
+3. 變更帳密檔案權限，讓使用者可以讀＋寫
+```
+chmod 600 /etc/rsyncd.pass
+```
+
+4. Pull 測試
+```
+rsync -vzrtopg --delete --progress --password-file=/etc/rsyncd.pass backup@192.168.56.102::mybackup /backup/192.168.56.102
+```
+> 若路徑 `/backup/192.168.56.102` 不存在，需手動透過 `mkdir -p /backup/192.168.56.102` 創建
+
+---
+
+> * `-v`, `--verbose` : increase verbosity（顯示詳細輸出）
+> * `-z`, `--compress` : compress file data during the transfer
+> * `-r`, `--recursive` : recurse into directories
+> * `-t`, `--times` : preserve times（保留時間訊息）
+> * `-o`, `--owner` : preserve owner (super-user only)（保留擁有者訊息）
+> * `-p`, `--perms` : preserve permissions（保留權限訊息）
+> * `-g`, `--group` : preserve group（保留群組訊息）
+> * `--progress` : show progress during transfer（顯示進度條）
+> * `--password-file=FILE` : read password from FILE（指定密碼檔案）
+
+---
+
+> * `backup@192.168.56.102::mybackup` = Server 帳號@Server IP::模組名稱
+>   * 模組名稱在 `/etc/rsyncd.conf` 檔案中：
+>     ```
+>     [mybackup] # 模組名稱
+>     path = /data # 要備份的路徑
+>     secrets file = /etc/rsyncd.pass # rsync 帳密檔案路徑
+>     ```
+> * `/backup/192.168.56.102` = Client 端路徑
+
+## Server 主動傳輸到 Client 操作過程（Server => Client）
+1. 讓 Server 連 Client 端不用再輸入密碼（可參考[之前的文章](http://bit.ly/2LGR0B1)）
+2. 測試
+```
+rsync -avz --delete /data root@192.168.56.104:/data/192.168.56.102
+```
+> 若有輸入 `--delete` 參數，能確保兩端的資料一致；反之若 Server 端刪除檔案 Client 端不會跟著刪除
+
+---
+
+> `/data root@192.168.56.104:/data/192.168.56.102`
+>   * `/data`：Server 端要備份過去的路徑
+>   * `root@192.168.56.104`：要登入的帳號
+>   * `:/data/192.168.56.102`：要存放的資料夾
+
+# inotify
+* 即時檔案監控系統，當檔案新增、修改、刪除時會發出通知。
+
+## inotify 操作流程
+* 參照：[Use inotify-tools on CentOS 7 or RHEL 7 to watch files and directories for events | Jensd's I/O buffer](http://jensd.be/248/linux/use-inotify-tools-on-centos-7-or-rhel-7-to-watch-files-and-directories-for-events)
+* 參照：[inotifywait命令_Linux inotifywait 命令用法詳解：異步文件系統監控機制](http://man.linuxde.net/inotifywait)
+
+1. 不能透過 Yum 安裝，需手動下載並 make
+```
+wget http://jensd.be/download/inotify-tools-3.14.tar.gz # 下載原始碼
+tar xvfz inotify-tools-3.14.tar.gz # 解壓縮
+cd inotify-tools-3.14
+./configure # 組態設定
+make # 編譯
+make install # 安裝至系統目錄
+```
+
+2. 監控 `/data` 路徑中的新增、修改、刪除等行為
+```
+inotifywait -mrq --timefmt '%d/%m/%y/%H:%M' --format '%T %w %f' -e modify,delete,create,attrib /data
+```
+* `-e modify,delete,create,attrib` : 說明要監控的行為
+
+1. 終端機再開啟一個視窗，在 `/data` 中新增檔案，檢查執行 `inotifywait` 的視窗有沒有新訊息
+```
+cd /data
+touch test
+```
+
+# 撰寫腳本，透過 rsync + inotify 來自動同步檔案
+1. Client 端新增一個腳本檔 `/rsync.sh`
+* 註：腳本檔沒有強制要放在哪個路徑，但這邊以 `/rsync.sh` 為例
+```sh
+#!/usr/bin/bash
+
+/usr/local/bin/inotifywait -mrq --timefmt '%Y/%m/%d-%H:%M:%S' --format '%T %w %f' \
+  -e modify,delete,create,move,attrib /data/backup \
+  | while read file
+    do
+      /usr/bin/rsync -auvrtzopgP --delete progress /data root@192.168.56.104:/data/192.168.56.102
+done
+```
+
+2. 新增腳本檔執行的權限，並且執行它
+```
+chmod u+x /rsync.sh
+/rsync.sh
+```
+
+3. Server 端新增、刪除檔案來測試是否有同步
+```
+touch f{1..5}
+rm -rf f{1..5}
+```
+
+# 參考資料
+## rsync
+* [rsync命令_Linux rsync 命令用法詳解：遠程數據同步工具](http://man.linuxde.net/rsync)
+* [CentOS 7使用rsync實現數據備份 - IT閱讀](https://www.itread01.com/content/1511251328.html)
+* [Linux 使用 rsync 遠端檔案同步與備份工具教學與範例 - G. T. Wang](https://blog.gtwang.org/linux/rsync-local-remote-file-synchronization-commands/)
+
+## inotify
+* [Use inotify-tools on CentOS 7 or RHEL 7 to watch files and directories for events | Jensd's I/O buffer](http://jensd.be/248/linux/use-inotify-tools-on-centos-7-or-rhel-7-to-watch-files-and-directories-for-events)
+* [inotifywait命令_Linux inotifywait 命令用法詳解：異步文件系統監控機制](http://man.linuxde.net/inotifywait)
+
+## 其它
+* [Incremental vs. Differential Backup - YouTube](https://www.youtube.com/watch?v=pmzeebcx-vk)
+* [[CentOS] cp、scp、rsync 資料備份機制 @ 黃昏的甘蔗 :: 隨意窩 Xuite日誌](https://blog.xuite.net/tolarku/blog/65150577-%5BCentOS%5D+cp%E3%80%81scp%E3%80%81rsync+%E8%B3%87%E6%96%99%E5%82%99%E4%BB%BD%E6%A9%9F%E5%88%B6)
+* [ssh-keygen 記住密碼](https://github.com/istar0me/linux-note/blob/107-1/W3(C11-1,2)%2020180925.md#%E9%80%8F%E9%81%8E-keygen-%E4%BE%86%E7%94%A2%E7%94%9F%E9%87%91%E9%91%B0%E4%BB%A5%E9%81%94%E6%88%90%E8%A8%98%E4%BD%8F%E5%AF%86%E7%A2%BC%E6%95%88%E6%9E%9C)

@@ -1,0 +1,546 @@
+- [自動化管理](#%E8%87%AA%E5%8B%95%E5%8C%96%E7%AE%A1%E7%90%86)
+- [ansible](#ansible)
+  - [環境設置](#%E7%92%B0%E5%A2%83%E8%A8%AD%E7%BD%AE)
+  - [操作步驟](#%E6%93%8D%E4%BD%9C%E6%AD%A5%E9%A9%9F)
+    - [確認 ssh 是否能連線](#%E7%A2%BA%E8%AA%8D-ssh-%E6%98%AF%E5%90%A6%E8%83%BD%E9%80%A3%E7%B7%9A)
+    - [設置 ssh 記住密碼](#%E8%A8%AD%E7%BD%AE-ssh-%E8%A8%98%E4%BD%8F%E5%AF%86%E7%A2%BC)
+    - [安裝 ansible](#%E5%AE%89%E8%A3%9D-ansible)
+    - [當 ssh 不是 22 port 時](#%E7%95%B6-ssh-%E4%B8%8D%E6%98%AF-22-port-%E6%99%82)
+    - [ansible 紀錄檔](#ansible-%E7%B4%80%E9%8C%84%E6%AA%94)
+  - [ansible 的用法](#ansible-%E7%9A%84%E7%94%A8%E6%B3%95)
+    - [格式](#%E6%A0%BC%E5%BC%8F)
+    - [常用選項](#%E5%B8%B8%E7%94%A8%E9%81%B8%E9%A0%85)
+  - [常用模組](#%E5%B8%B8%E7%94%A8%E6%A8%A1%E7%B5%84)
+    - [`command`：預設的模組，執行指定的命令](#command%E9%A0%90%E8%A8%AD%E7%9A%84%E6%A8%A1%E7%B5%84%E5%9F%B7%E8%A1%8C%E6%8C%87%E5%AE%9A%E7%9A%84%E5%91%BD%E4%BB%A4)
+    - [`ansible-doc`：模組的說明文件](#ansible-doc%E6%A8%A1%E7%B5%84%E7%9A%84%E8%AA%AA%E6%98%8E%E6%96%87%E4%BB%B6)
+    - [`shell`：複雜的指令建議採用此模組](#shell%E8%A4%87%E9%9B%9C%E7%9A%84%E6%8C%87%E4%BB%A4%E5%BB%BA%E8%AD%B0%E6%8E%A1%E7%94%A8%E6%AD%A4%E6%A8%A1%E7%B5%84)
+    - [`script`：在 Client 端寫一個腳本，在 Server 端執行](#script%E5%9C%A8-client-%E7%AB%AF%E5%AF%AB%E4%B8%80%E5%80%8B%E8%85%B3%E6%9C%AC%E5%9C%A8-server-%E7%AB%AF%E5%9F%B7%E8%A1%8C)
+    - [`copy`：從 Client 複製檔案到 Server](#copy%E5%BE%9E-client-%E8%A4%87%E8%A3%BD%E6%AA%94%E6%A1%88%E5%88%B0-server)
+    - [`fetch`：從 Server 擷取檔案到 Client](#fetch%E5%BE%9E-server-%E6%93%B7%E5%8F%96%E6%AA%94%E6%A1%88%E5%88%B0-client)
+    - [`file`：針對檔案進行操作](#file%E9%87%9D%E5%B0%8D%E6%AA%94%E6%A1%88%E9%80%B2%E8%A1%8C%E6%93%8D%E4%BD%9C)
+    - [`yum`](#yum)
+    - [`service`](#service)
+    - [`user`：新增使用者](#user%E6%96%B0%E5%A2%9E%E4%BD%BF%E7%94%A8%E8%80%85)
+    - [`group`：新增群組](#group%E6%96%B0%E5%A2%9E%E7%BE%A4%E7%B5%84)
+  - [ansible playbooks](#ansible-playbooks)
+    - [YAML 格式](#yaml-%E6%A0%BC%E5%BC%8F)
+    - [範例1 : Hello world](#%E7%AF%84%E4%BE%8B1--hello-world)
+    - [範例2 : 自動產生網頁](#%E7%AF%84%E4%BE%8B2--%E8%87%AA%E5%8B%95%E7%94%A2%E7%94%9F%E7%B6%B2%E9%A0%81)
+    - [範例3 : 當有能忽略的錯誤時⋯⋯](#%E7%AF%84%E4%BE%8B3--%E7%95%B6%E6%9C%89%E8%83%BD%E5%BF%BD%E7%95%A5%E7%9A%84%E9%8C%AF%E8%AA%A4%E6%99%82%E2%8B%AF%E2%8B%AF)
+    - [範例4 : Notify, handler](#%E7%AF%84%E4%BE%8B4--notify-handler)
+    - [範例5 : parameter 透過 `{{}}` 包著](#%E7%AF%84%E4%BE%8B5--parameter-%E9%80%8F%E9%81%8E--%E5%8C%85%E8%91%97)
+    - [帶入 Argument 有三種方法](#%E5%B8%B6%E5%85%A5-argument-%E6%9C%89%E4%B8%89%E7%A8%AE%E6%96%B9%E6%B3%95)
+      - [方法1：在呼叫時才帶入 argument](#%E6%96%B9%E6%B3%951%E5%9C%A8%E5%91%BC%E5%8F%AB%E6%99%82%E6%89%8D%E5%B8%B6%E5%85%A5-argument)
+      - [方法2：直接在 yml 檔案內加入 vars 區塊](#%E6%96%B9%E6%B3%952%E7%9B%B4%E6%8E%A5%E5%9C%A8-yml-%E6%AA%94%E6%A1%88%E5%85%A7%E5%8A%A0%E5%85%A5-vars-%E5%8D%80%E5%A1%8A)
+      - [方法3：針對主機設置 argument](#%E6%96%B9%E6%B3%953%E9%87%9D%E5%B0%8D%E4%B8%BB%E6%A9%9F%E8%A8%AD%E7%BD%AE-argument)
+- [參考資料](#%E5%8F%83%E8%80%83%E8%B3%87%E6%96%99)
+- [雜記](#%E9%9B%9C%E8%A8%98)
+    - [補充：移除 `google-authenticator-libpam` 過程](#%E8%A3%9C%E5%85%85%E7%A7%BB%E9%99%A4-google-authenticator-libpam-%E9%81%8E%E7%A8%8B)
+
+---
+
+# 自動化管理
+* 當管理大量的裝置時，不可能一臺一臺設置，因此需要有大量管理的工具，方便部署與更新。
+* 常見工具有 saltstack, ansible, puppet
+
+# ansible
+* 由 Python 所撰寫的軟體
+* 能夠大量管理多台機器
+* 管理透過 ssh 的連線
+* 只適合小型網路的管理，大型網路管理建議改用 saltstake
+* 只需要安裝在 Client 端（管理端）即可
+* 能確保不論操作一次或多次的結果一致（但有反效果，可參照 [Notify, handler](#notify-handler) 部分）
+
+## 環境設置
+![](/media/W16_ansible_enviromental_setting.jpg)
+
+* 需準備三台虛擬機，Client 端進行管理，Server 端被管理
+1. Client (192.168.56.103)
+2. Server 1 (192.168.56.102)
+3. Server 2 (192.168.56.104)
+
+## 操作步驟
+### 確認 ssh 是否能連線
+![](/media/W16_ssh_command.jpg)
+
+> ssh 為 20 port
+```
+netstat -tunlp | grep 20
+```
+
+### 設置 ssh 記住密碼
+> 以下操作皆在 Client 端
+> 操作此步驟前須先移除 `google-authenticator-libpam`
+```
+cd /root/.ssh/
+ssh-keygen
+scp /root/.ssh/id_rsa.pub root@192.168.56.102:/root/.ssh/authorized_keys
+scp /root/.ssh/id_rsa.pub root@192.168.56.104:/root/.ssh/authorized_keys
+```
+
+### 安裝 ansible
+> * 參照：[ansible從入門到放棄-Masuri-51CTO博客](https://blog.51cto.com/11886307/2385720)
+> * 在 Client （管理端）設置
+* 安裝 ansible
+```
+yum install -y ansible
+```
+
+* 編輯 `/etc/ansible/hosts` 來設置群組
+```
+[app1]
+192.168.56.102
+
+[app2]
+192.168.56.104
+
+[myapp]
+192.168.56.102
+192.168.56.104
+```
+
+* 針對 myapp 群組進行管理（操作）
+  * `-m` : module
+  * `command` 為預設模組，因此能夠省略
+  * 若要列印詳細資訊，可在後方加入 `-v`, `-vv`, `-vvv`（由簡易到詳細）
+```
+ansible myapp -m command -a "ls /root"
+```
+
+### 當 ssh 不是 22 port 時
+* 如手動編輯 Server 1 的 `/etc/ssh/sshd_config` 檔案，手動修改成 2222 port
+```sh
+# If you want to change the port on a SELinux system, you have to tell
+# SELinux about this change.
+# semanage port -a -t ssh_port_t -p tcp #PORTNUMBER
+#
+#Port 22 # 修改為 Port 2222
+```
+
+* 重新啟動 sshd
+```
+systemctl restart sshd
+```
+
+* 在 Client 端的 `/etc/ansible/hosts` 檔案，在 IP 後面加上 `:2222` 即可
+```
+[app1]
+192.168.56.102:2222
+
+[app2]
+192.168.56.104
+
+[myapp]
+192.168.56.102:2222
+192.168.56.104
+```
+
+* 可再進行測試是否能連上
+```
+ansible myapp -m command -a "ls /root"
+```
+
+### ansible 紀錄檔
+* 編輯 `/etc/ansible/ansible.cfg` 文件（主配置文件），取消 `log_path` 的註解
+```bash
+# logging is off by default unless this path is defined
+# if so defined, consider logrotate
+log_path = /var/log/ansible.log
+```
+
+
+## ansible 的用法
+```sh
+ansible all --list-hosts # 列出當前所有管理的機器
+ansible app1 --list-hosts # 列出 app1 群組所管理的機器
+ansible app2 --list-hosts # 列出 app2 群組所管理的機器
+ansible myapp --list-hosts # 列出 myapp 群組所管理的機器
+```
+
+### 格式
+* 可用 `[01:10]` 代表 01 ~ 10
+* 如 `192.168.73.[01:10]` 代表 `192.168.73.01` ~ `192.168.73.10`
+
+### 常用選項
+* `-m`, module
+* `C`, check：檢查指令是否正確
+* `-v`, `-vv`, `-vvv`：顯示詳細過程（由易到難）
+
+## 常用模組
+### `command`：預設的模組，執行指定的命令
+* 缺點：只能支援基本、簡單的指令，如萬用字元不支援
+* 若要採用較進階的指令，會建議使用 `shell` 模組
+* 常用選項
+  * `-a`, argument：模組的參數
+
+---
+
+* `rpm -q vsftpd`：查看是否安裝 `vsftpd` 套件 (q:query)
+```
+ansible app1 -m command -a "rpm -q vsftpd"
+```
+
+* 查看使用者 `user` 是否存在
+  * `getent`：
+```bash
+ansible app1 -m command -a "getent passwd user" # 以"X"隱藏密碼
+ansible app1 -m command -a "getent shadow user" # 查看加密後的密碼
+```
+
+### `ansible-doc`：模組的說明文件
+* `ansible-doc command`：查詢 `command` 模組的說明
+* `ansible-doc -l`：列出所有的模組
+* `ansible-doc -l | wc -l`：計算總共有多少模組（計算幾行）
+  * `wc` : word count
+  * `-l` : line
+* 也有支援 windows 的模組，可透過 `ansible-doc -l | grep win` 查詢
+
+### `shell`：複雜的指令建議採用此模組
+* `creates`：當檔案存在時，不執行後面的指令
+```
+ansible app1 -m shell -a "creates=/tmp/test ls /tmp"
+```
+
+* `removes`：當檔案存在時，執行後面的指令
+```
+ansible app1 -m shell -a "removes=/tmp/test ls /tmp"
+```
+
+### `script`：在 Client 端寫一個腳本，在 Server 端執行
+* 先在 Client 端寫一個腳本
+* 新增並寫入 `a.sh`
+```
+#!/usr/bin/bash
+
+echo "hello world"
+hostname
+```
+
+* 測試執行
+```
+ansible app1 -m script -a a.sh
+```
+
+### `copy`：從 Client 複製檔案到 Server
+* 由 Client 複製 `mya.txt` 檔案到 app2 群組，並重新命名為 `myb.txt`
+  * `src`：來源檔案
+  * `dest`：目的檔案
+  * `backup=yes`：會將原本檔案重新命名，然後再貼上新的檔案
+  * `mode`：讀寫的模式
+  * `owner`：傳輸過去後的擁有者
+
+```bash
+vim /root/mya.txt # 在 Client 端新增檔案
+ansible app2 -m copy -a "src=/root/mya.txt dest=/tmp/myb.txt backup=yes mode=600 owner=user" # 進行複製
+ansible app2 -m command -a "ls -l /tmp" # 能查看到在 Server 1 的檔案
+ansible app2 -m command -a "cat /tmp/myb.txt" # 或透過查看檔案內容來測試
+```
+
+### `fetch`：從 Server 擷取檔案到 Client
+* 可以擷取 `log` 紀錄檔
+
+```bash
+ansible myapp -m fetch -a "src=/etc/passwd dest=/tmp"
+```
+
+* 因為不同的 Server 可能會有相同的檔案，因此 ansible 會根據 IP 自動產生相對應的目錄
+```
+[root@localhost ~]# cd /tmp
+[root@localhost tmp]# ls
+192.168.56.102    192.168.56.104
+[root@localhost tmp]# cd 192.168.56.102
+[root@localhost 192.168.56.102]# ls
+etc
+[root@localhost 192.168.56.102]# cd etc
+[root@localhost etc]# ls
+passwd
+[root@localhost etc]# cd passwd
+-bash: cd: passwd: 並不是一個目錄
+[root@localhost etc]# cat passwd
+
+# 顯示檔案（密碼）內容
+```
+
+### `file`：針對檔案進行操作
+```bash
+ansible app2 -m file -a "path=/tmp/myb.txt owner=user mode=600" # 修改檔案的擁有者與模式
+ansible app2 -m file -a "path=/tmp/myb.txt owner=user mode=600 state=absent" # 刪除文件
+ansible app2 -m file -a "src=/tmp/myb.txt name=/tmp/myc.txt state=link" # 建立軟連結
+```
+
+* 執行完建立軟連結後的結果：
+```
+-rw------- 1 user root  6  6月  5 19:36 myb.txt
+lrwxrwxrwx 1 root root 12  6月  5 19:37 myc.txt -> /tmp/myb.txt
+```
+
+### `yum`
+* 原本是透過 `ansible app2 -m command -a "rpm -q vsftpd"` 查詢是否有有安裝過指定套件
+* 現在能透過 `yum` 模組來取代
+
+```bash
+ansible app2 -m yum -a "name=vsftpd state=present" # 安裝 vsftpd 套件
+# state=present 可以省略，因為預設的狀態就是 present
+ansible app2 -m yum -a "name=vsftpd state=absent" # 移除 vsftpd 套件
+# 等同於 ansible app2 -m command -a "rpm -q vsftpd"
+```
+
+* 若要避免每次都要花時間擷取所有新套件的資訊，也可以先下載 `rpm` 檔案再手動安裝
+```
+ansible app2 -m copy -a "src=<套件名稱.rpm> dest=/root"
+ansible app2 -m yum -a "name=/root/<套件名稱.rpm>"
+```
+
+### `service`
+* 類似於 `systemctl`
+* `ansible app2 -m service -a "name=httpd state=stopped"`
+* state 能替換以下幾種：
+  * started # 開啟
+  * reloaded # 重新啟動
+
+### `user`：新增使用者
+* 確保對方的使用者是否存在，若在會顯示相關訊息
+```bash
+ansible app2 -m user -a 'name=user1 comment="test user" uid=1111 home=/home/user1'
+
+ansible app2 -m command -a "getend passwd user1" # 確認使用者是否存在
+
+ansible app2 -m user -a 'name=user1 state=absent'
+```
+
+### `group`：新增群組
+```
+ansible app2 -m command -a "getent passwd user1"
+ansible app2 -m group -a 'name=aaa'
+ansible app2 -m command -a "getent group aaa"
+```
+
+## ansible playbooks
+* ansible 的腳本檔
+
+### YAML 格式
+* 參照：[最新Ansible Dev ops自動化視頻 -- 11 ansible的YAML介紹 - YouTube](https://www.youtube.com/watch?v=9n6tVVa9se8&list=PLOfJyn_hHwP_ATbd7GkDobQUiA2i7jLhN&index=11)
+* YAML 不等於 XML
+* YAML 可以 JSON 格式交換
+
+### 範例1 : Hello world
+* 新增 `hello.yml` 檔案
+```yaml
+---
+- hosts: app2 # 應用在哪個主機，hosts:前後需有空白
+  remote_user: root # 遠端使用哪個使用者操作
+
+  tasks:
+    - name: hello world # 工作名稱
+      command: /usr/bin/wall hello world # 執行的指令
+```
+* 原本要輸入這行指令：`ansible app2 -m command -a '/usr/bin/wall hello world'`
+* 現在可直接使用腳本：`ansible-playbook -C hello.yml`
+
+### 範例2 : 自動產生網頁
+* 先新增 `a.html`，網頁內容：
+```
+Hello World!
+```
+
+* 編輯 `test.yml`
+```YAML
+---
+- hosts: app2
+  remote_user: root
+  tasks:
+    - name: create new file
+      file: name=/tmp/newfile state=touch
+    - name: create new user
+      user: name=test2 system=yes shell=/sbin/nologin
+    - name: install package # 安裝 httpd 套件
+      yum: name=httpd
+    - name: copy html # 將檔案複製到 app2 的指定資料夾
+      copy: src=a.html dest=/var/www/html
+    - name: start service # 啟動 httpd 服務
+      service: name=httpd state=started
+```
+
+* 在 Client 端執行測試：
+```
+curl 192.168.56.104/a.html
+```
+
+### 範例3 : 當有能忽略的錯誤時⋯⋯
+* 當 `test.yml` 中的某個錯誤能夠忽略，可以在後方加入 `|| /bin/true`
+  * 代表當前方的程式碼失敗時會執行它，不會讓整個腳本都不能執行
+* 如將剛才的 `test.yml` 新增一個 task，執行一個不存在的腳本 `/usr/bin/somecommand`：
+  * 雖然這個腳本執行失敗，但失敗後他會改執行 `/bin/true`，因此最後不會顯示錯誤提示
+```YAML
+---
+- hosts: app2
+  remote_user: root
+  tasks:
+    # 省略前方的 tasks
+    - name: run a shell script
+      shell: /usr/bin/somecommand || /bin/true
+```
+
+### 範例4 : Notify, handler
+* 由於 ansible 不論執行一次或多次結果都相同，會導致儘管修改了 httpd 的 Port 後，Port 仍然留在 80
+* 但可以透過 Notify 與 Handler 來解決
+```YAML
+---
+- hosts: app2
+  remote_user: root
+  tasks:
+  # 編輯 copy html 的 task
+    - name: copy html # 將檔案複製到 app2 的指定資料夾
+      copy: src=/etc/httpd/conf/httpd.conf dest=/etc/httpd/conf
+```
+
+* 原本 app2 的 httpd 應該在 80 port
+```
+ansible app2 -m shell -a "netstat -tunlp | grep httpd"
+```
+
+* 編輯 Client 端的 `/etc/httpd/conf/httpd.conf`
+  * 由 Listen 80 改為 Listen 8080
+* 編輯 `test.yml`
+```yml
+---
+- hosts: app2
+  remote_user: root
+  tasks:
+  # 編輯 copy html 的 task
+    - name: copy html # 將檔案複製到 app2 的指定資料夾
+      copy: src=/etc/httpd/conf/httpd.conf dest=/etc/httpd/conf
+      notify: restart httpd # new line
+    # 省略 start service 的 task
+  handlers: # new line
+    - name: restart httpd # new line
+      service: name=httpd state=started # new line
+```
+* notify 後的 `restart httpd` 會觸發 handlers 中 name 為 `restart httpd` 的 service
+
+* 確認 app2 上的 httpd 是否變為 8080 port
+```
+ansible app2 -m shell -a "netstat -tunlp | grep httpd"
+```
+
+### 範例5 : parameter 透過 `{{}}` 包著
+> * 註：parameter vs. argument
+>   * parameter：用來代表參數的符號
+>   * argument：參數實際的值
+
+* 編輯 `test.yml` 檔案
+```yml
+---
+- hosts: app2
+  remote_user: root
+  tasks:
+  # 省略前方的 tasks
+  - name: install new package
+    yum: name={{ pkgname }}
+
+  handlers:
+    - name: restart httpd
+      service: name=httpd state=started
+```
+
+### 帶入 Argument 有三種方法
+* 優先順序：方法1 > 2 > 3
+#### 方法1：在呼叫時才帶入 argument
+* `-e`：指定 argument
+```
+ansible-playbook -e pkgname=vsftpd test.yml
+```
+
+#### 方法2：直接在 yml 檔案內加入 vars 區塊
+
+
+```yml
+---
+- hosts: app2
+  remote_user: root
+  vars:
+  - pkgname1: vsftpd
+  - pkgname2: joe
+  tasks:
+  # 省略前方的 tasks
+  - name: install new package
+    yum: name={{ pkgname1 }}
+  - name: install new package
+    yum: name={{ pkgname2 }}
+
+  handlers:
+    - name: restart httpd
+      service: name=httpd state=started
+```
+
+#### 方法3：針對主機設置 argument
+* 在 `/etc/ansible/hosts` 後面新增 argument
+```
+[app1]
+192.168.56.102:2222 
+
+[app2]
+192.168.56.104
+
+[myapp]
+192.168.56.102:2222 pkgname=joe
+192.168.56.104 pkgname=vsftpd
+```
+
+# 參考資料
+1. [ansible從入門到放棄-Masuri-51CTO博客](https://blog.51cto.com/11886307/2385720)
+2. [最新ansible教學視頻（21集） - YouTube](https://www.youtube.com/playlist?list=PLOfJyn_hHwP_ATbd7GkDobQUiA2i7jLhN)
+
+
+# 雜記
+* 下週上課(6/12)就可以報告，最晚是下下週(6/19)（但不建議）
+
+---
+
+### 補充：移除 `google-authenticator-libpam` 過程
+```bash
+[root@localhost .ssh]# rpm -qa | grep openssh
+openssh-6.4p1-8.el7.x86_64
+openssh-clients-6.4p1-8.el7.x86_64
+openssh-server-6.4p1-8.el7.x86_64
+[root@localhost .ssh]# rpm -e openssh-server
+警告：/etc/ssh/sshd_config 已被另存為 /etc/ssh/sshd_config.rpmsave
+警告：/etc/pam.d/sshd 已被另存為 /etc/pam.d/sshd.rpmsave
+[root@localhost .ssh]# yum install -y openssh-server
+
+# 省略安裝過程
+
+[root@localhost .ssh]# systemctl status sshd
+● sshd.service - OpenSSH server daemon
+   Loaded: loaded (/usr/lib/systemd/system/sshd.service; enabled; vendor preset: enabled)
+   Active: inactive (dead)
+     Docs: man:sshd(8)
+           man:sshd_config(5)
+
+ 6月 05 11:10:49 localhost.localdomain sshd[7623]: Connection closed by 192.168.56.103 [preauth]
+ 6月 05 11:11:22 localhost.localdomain sshd(pam_google_authenticator)[7628]: Invalid verification code for root
+ 6月 05 11:11:24 localhost.localdomain sshd[7625]: error: PAM: Authentication failure for root from 192.168.56.103
+ 6月 05 11:11:32 localhost.localdomain sshd(pam_google_authenticator)[7629]: Invalid verification code for root
+ 6月 05 11:11:34 localhost.localdomain sshd[7625]: error: PAM: Authentication failure for root from 192.168.56.103
+ 6月 05 11:11:34 localhost.localdomain sshd[7625]: Postponed keyboard-interactive for root from 192.168.56.103 port 47...auth]
+ 6月 05 11:11:34 localhost.localdomain sshd[7625]: Connection closed by 192.168.56.103 [preauth]
+ 6月 05 11:12:30 localhost.localdomain systemd[1]: Stopping OpenSSH server daemon...
+ 6月 05 11:12:30 localhost.localdomain sshd[3188]: Received signal 15; terminating.
+ 6月 05 11:12:30 localhost.localdomain systemd[1]: Stopped OpenSSH server daemon.
+Hint: Some lines were ellipsized, use -l to show in full.
+[root@localhost .ssh]# systemctl start sshd
+[root@localhost .ssh]# systemctl status sshd
+● sshd.service - OpenSSH server daemon
+   Loaded: loaded (/usr/lib/systemd/system/sshd.service; enabled; vendor preset: enabled)
+   Active: active (running) since 三 2019-06-05 11:22:32 CST; 1s ago
+     Docs: man:sshd(8)
+           man:sshd_config(5)
+ Main PID: 7867 (sshd)
+   CGroup: /system.slice/sshd.service
+           └─7867 /usr/sbin/sshd -D
+
+ 6月 05 11:22:32 localhost.localdomain systemd[1]: Starting OpenSSH server daemon...
+ 6月 05 11:22:32 localhost.localdomain sshd[7867]: Server listening on 0.0.0.0 port 22.
+ 6月 05 11:22:32 localhost.localdomain sshd[7867]: Server listening on :: port 22.
+ 6月 05 11:22:32 localhost.localdomain systemd[1]: Started OpenSSH server daemon.
+```
