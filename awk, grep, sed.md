@@ -1,5 +1,5 @@
 - [Linux 三劍客](#linux-%E4%B8%89%E5%8A%8D%E5%AE%A2)
-  - [grep, awk](#grep-awk)
+  - [grep, 基礎 awk](#grep-%E5%9F%BA%E7%A4%8E-awk)
   - [sed (string editor)](#sed-string-editor)
   - [awk](#awk)
   - [匹配過程](#%E5%8C%B9%E9%85%8D%E9%81%8E%E7%A8%8B)
@@ -10,11 +10,11 @@
 > `cat >> fileName` 能新增一個名為 `fileName` 的檔案，之後輸入檔案內容，再按 Ctrl + C 停止輸入
 
 * linux 三劍客：`grep`, `sed`, `awk`
-    * `grep`：查找
+    * `grep`：字串擷取工具
     * `sed`：行編輯器
     * `awk`：文字處理工具
 
-## grep, awk
+## grep, 基礎 awk
 * `grep -i` : 不分大小寫
 * `grep -v` : 排除特定字串
 * `grep -o` : 只顯示特定字串（only-matching）
