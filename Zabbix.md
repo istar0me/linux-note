@@ -10,6 +10,9 @@
   - [撰寫 Zabbix 通知腳本](#%E6%92%B0%E5%AF%AB-zabbix-%E9%80%9A%E7%9F%A5%E8%85%B3%E6%9C%AC)
   - [新增 LINE Notify 通知類型](#%E6%96%B0%E5%A2%9E-line-notify-%E9%80%9A%E7%9F%A5%E9%A1%9E%E5%9E%8B)
   - [設定透過 LINE Notify 通知](#%E8%A8%AD%E5%AE%9A%E9%80%8F%E9%81%8E-line-notify-%E9%80%9A%E7%9F%A5)
+- [最佳化](#%E6%9C%80%E4%BD%B3%E5%8C%96)
+  - [在通知訊息裡加入時間](#%E5%9C%A8%E9%80%9A%E7%9F%A5%E8%A8%8A%E6%81%AF%E8%A3%A1%E5%8A%A0%E5%85%A5%E6%99%82%E9%96%93)
+  - [區別](#%E5%8D%80%E5%88%A5)
 - [參考資料](#%E5%8F%83%E8%80%83%E8%B3%87%E6%96%99)
   - [安裝 Zabbix 操作步驟與說明](#%E5%AE%89%E8%A3%9D-zabbix-%E6%93%8D%E4%BD%9C%E6%AD%A5%E9%A9%9F%E8%88%87%E8%AA%AA%E6%98%8E)
   - [透過 LINE Notify 提醒 Zabbix 訊息](#%E9%80%8F%E9%81%8E-line-notify-%E6%8F%90%E9%86%92-zabbix-%E8%A8%8A%E6%81%AF-1)
@@ -240,6 +243,37 @@ chmod 700 /usr/lib/zabbix/alertscripts/LINE_Notify.sh
 6. 如果 Admin 使用者有錯誤訊息時，會在 LINE 中接收到即時的通知
 ![](media/zabbix/LINE_Notify_15.png)
 * 註：由於 Zabbix 沒有測試訊息，因此在此是開啟許多網頁來讓 swap 空間不足。
+
+# 最佳化
+## 在通知訊息裡加入時間
+* 原本想說 LINE 訊息就會顯示發送時間，因此不用在訊息內加入時間
+* 但老師提醒管理/維護者可能來自世界各地，顯示的時間會隨時區不同，因此還是在通知訊息內加入時間較好
+* 補充：發送訊息還是有時間差，因此附上原本的時間較佳
+
+1. Configurations -> Actions -> 剛建立的 Action
+![](media/zabbix/LINE_Notify_16.png)
+
+2. Operations 內的 Default messages 中加入 `Trigger Date: {DATE} {EVENT.TIME}`
+![](media/zabbix/LINE_Notify_17.png)
+
+3. Recovery Operations 的 Default messages 也加入同樣的訊息，完成後記得要保存
+![](media/zabbix/LINE_Notify_18.png)
+
+4. 試著產生錯誤訊息，像是可以暫時關閉 `zabbix_agent`
+```
+systemctl stop zabbix-agent
+```
+
+5. 若設置無誤的話，應該會接收到此錯誤通知
+![](media/zabbix/LINE_Notify_19.png)
+
+6. 再次啟動（`systemctl start zabbix-agent`）後，應該會收到此訊息
+![](media/zabbix/LINE_Notify_20.png)
+
+## 區別
+* Operations 與 Recovery Operations 差別在哪裡？
+  * Operations 僅在出現問題時才顯示，如 `PROBLEM`
+  * Recovery Operations 在問題解決時（Resolved）顯示，如 `OK`
 
 # 參考資料
 ## 安裝 Zabbix 操作步驟與說明
