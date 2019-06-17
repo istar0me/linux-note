@@ -1,3 +1,4 @@
+- [投影片](#%E6%8A%95%E5%BD%B1%E7%89%87)
 - [安裝 Zabbix](#%E5%AE%89%E8%A3%9D-zabbix)
   - [關閉 SELinux 與防火牆](#%E9%97%9C%E9%96%89-selinux-%E8%88%87%E9%98%B2%E7%81%AB%E7%89%86)
   - [安裝 LAMP](#%E5%AE%89%E8%A3%9D-lamp)
@@ -15,6 +16,9 @@
 
 ---
 
+# 投影片
+[![](media/zabbix/Zabbix_cover.jpeg)](https://drive.google.com/file/d/1G-iLwMfrXM49rXt68ODoxc-SPt9F0RrR/view)
+
 # 安裝 Zabbix
 * 註：所有指令皆在 root 使用者下執行
 
@@ -22,7 +26,7 @@
 1. 關閉 SELinux
 > 可先透過 `getenforce` 查看，若為 Disabled 則可以省略此步驟
 ```sh
-vi /etc/sysconfig/selinux
+vim /etc/sysconfig/selinux
 # selinux=disabled
 ```
 
@@ -88,7 +92,7 @@ systemctl restart httpd
 ```
 
 6. 設定資料庫名稱與帳號密碼
-```
+```sh
 vim /etc/zabbix/zabbix_server.conf
 # DBName=zabbix（不變）
 # DBUser=zabbix（不變）
