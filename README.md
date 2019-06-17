@@ -23,6 +23,7 @@
 
 ## 監控軟體
 * [Nagios](/Nagios.md)
+* [Zabbix](/Zabbix.md)
 
 ## 自動化工具
 * [Ansible：自動化部署工具](/Ansible.md)
