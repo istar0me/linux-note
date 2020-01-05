@@ -1,0 +1,51 @@
+FROM centos:latest
+MAINTAINER minidino <istar0me@gmail.com>
+
+ENV URL rtmp://172.16.45.128/live/demo
+ENV FILE test.mp4
+
+RUN systemctl disable firewalld && \
+    systemctl stop firewalld && \
+
+    sed -i 's/SELINUX=enforcing/SELINUX=disabled/g' /etc/selinux/config && \
+    
+    sudo yum install -y openssh-server && \
+
+    yum groupinstall -y "Development Tools" && \
+
+    mkdir ~/temp && \
+    cd ~/temp && \
+
+    wget http://nginx.org/download/nginx-1.9.9.tar.gz && \
+    wget https://github.com/arut/nginx-rtmp-module/archive/master.zip && \
+
+    yum install -y unzip && \
+
+    tar -xvf nginx-1.9.9.tar.gz && \
+    unzip master.zip && \
+    cd nginx-1.9.9 && \
+
+    ./configure --add-module=../nginx-rtmp-module-master/ && \
+    make && \
+    make install && \
+
+    mkdir /etc/nginx -p && \
+    cd conf && \
+    cp nginx.conf mime.types /etc/nginx/ && \
+
+#     echo "rtmp {
+#   server {
+#     listen 1935;
+#     chunk_size 4096;
+
+#     application live {
+#       live on;
+#       record off;
+#     }
+#   }
+# }" >> /etc/nginx/nginx.conf \
+
+#     /usr/local/nginx/sbin/nginx -c /etc/nginx/nginx.conf \
+
+#     netstat -tunlp | grep 80 \
+#     netstat -tunlp | grep 1935 \
